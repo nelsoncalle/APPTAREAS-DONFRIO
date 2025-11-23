@@ -64,7 +64,7 @@ export default function WorkersScreen() {
         <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#2c3e50' }}>Trabajadores</Text>
         <TouchableOpacity 
           style={{ backgroundColor: '#9b59b6', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 8 }}
-          onPress={() => router.push('/create-worker')}
+          onPress={() => Alert.alert('Próximamente', 'Funcionalidad de crear trabajadores estará disponible pronto')}
         >
           <Text style={{ color: '#fff', fontWeight: '600' }}>+ Nuevo</Text>
         </TouchableOpacity>

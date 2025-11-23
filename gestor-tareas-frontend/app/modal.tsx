@@ -6,13 +6,9 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-  Platform,
-  Modal,
-  Image
+  Modal
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
 import { taskService } from '../services/taskService';
 import { workerService } from '../services/workerService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,15 +23,17 @@ export default function CreateTaskModal() {
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [idTrabajador, setIdTrabajador] = useState('');
-  const [fechaLimite, setFechaLimite] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [fechaLimite, setFechaLimite] = useState('');
   const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
-  const [foto, setFoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     loadTrabajadores();
+    // Establecer fecha por defecto (mañana)
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    setFechaLimite(manana.toISOString().split('T')[0]);
   }, []);
 
   const loadTrabajadores = async () => {
@@ -47,32 +45,8 @@ export default function CreateTaskModal() {
     }
   };
 
-  const seleccionarFoto = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Se necesita acceso a la galería para seleccionar fotos');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setFoto(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo seleccionar la foto');
-    }
-  };
-
   const handleCreateTask = async () => {
-    if (!titulo || !descripcion || !idTrabajador) {
+    if (!titulo || !descripcion || !idTrabajador || !fechaLimite) {
       Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
       return;
     }
@@ -87,13 +61,8 @@ export default function CreateTaskModal() {
         descripcion,
         id_trabajador: parseInt(idTrabajador),
         estado: 'pendiente',
-        fecha_limite: fechaLimite.toISOString().split('T')[0],
-        id_usuario: user.id,
-        foto: foto ? {
-          uri: foto,
-          type: 'image/jpeg',
-          name: `tarea_${Date.now()}.jpg`
-        } : null
+        fecha_limite: fechaLimite,
+        id_usuario: user.id
       };
 
       await taskService.createTask(taskData);
@@ -199,58 +168,24 @@ export default function CreateTaskModal() {
           </ScrollView>
 
           <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 10, color: '#2c3e50' }}>Fecha límite:</Text>
-          <TouchableOpacity 
+          <TextInput
             style={{
               backgroundColor: '#fff',
               borderWidth: 1,
               borderColor: '#ddd',
               borderRadius: 12,
-              padding: 15,
+              paddingHorizontal: 15,
+              paddingVertical: 12,
+              fontSize: 16,
               marginBottom: 20,
             }}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={{ color: '#2c3e50' }}>
-              {fechaLimite.toLocaleDateString('es-ES', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </Text>
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={fechaLimite}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) setFechaLimite(selectedDate);
-              }}
-            />
-          )}
-
-          <Text style={{ fontSize: 16, fontWeight: '600', marginBottom: 10, color: '#2c3e50' }}>Foto (opcional):</Text>
-          <TouchableOpacity 
-            style={{
-              backgroundColor: '#fff',
-              borderWidth: 1,
-              borderColor: '#ddd',
-              borderRadius: 12,
-              padding: 15,
-              marginBottom: 20,
-              alignItems: 'center'
-            }}
-            onPress={seleccionarFoto}
-          >
-            {foto ? (
-              <Image source={{ uri: foto }} style={{ width: 100, height: 100, borderRadius: 8 }} />
-            ) : (
-              <Text style={{ color: '#7f8c8d' }}>Seleccionar foto</Text>
-            )}
-          </TouchableOpacity>
+            placeholder="YYYY-MM-DD"
+            value={fechaLimite}
+            onChangeText={setFechaLimite}
+          />
+          <Text style={{ color: '#7f8c8d', fontSize: 12, marginBottom: 20 }}>
+            Formato: Año-Mes-Día (ej: 2024-01-15)
+          </Text>
 
           <TouchableOpacity 
             style={{
