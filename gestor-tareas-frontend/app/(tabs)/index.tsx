@@ -120,7 +120,7 @@ export default function HomeScreen() {
         {user?.rol === 'superusuario' && (
           <TouchableOpacity 
             style={{ backgroundColor: '#e67e22', padding: 15, borderRadius: 12 }}
-            onPress={() => Alert.alert('Próximamente', 'Funcionalidad de crear usuarios estará disponible pronto')}
+            onPress={() => router.push('/create-user')}
           >
             <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '600' }}>Crear Usuario</Text>
           </TouchableOpacity>
