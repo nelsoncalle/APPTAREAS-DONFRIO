@@ -82,12 +82,12 @@ export default function LoginScreen() {
                 fontSize: 16,
                 marginBottom: 15,
               }}
-              placeholder="Correo electrónico"
+              placeholder="Usuario"
               placeholderTextColor="#999"
               value={correo}
               onChangeText={setCorreo}
               autoCapitalize="none"
-              keyboardType="email-address"
+            
             />
             
             <TextInput
