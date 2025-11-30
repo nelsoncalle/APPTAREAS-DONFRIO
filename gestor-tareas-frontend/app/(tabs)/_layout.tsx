@@ -1,44 +1,36 @@
-import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, ActivityIndicator } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function RootLayout() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      setIsAuthenticated(!!token);
-    } catch (error) {
-      setIsAuthenticated(false);
-    }
-  };
-
-  if (isAuthenticated === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#3498db" />
-      </View>
-    );
-  }
-
+export default function TabLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-      ) : (
-        <>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="create-worker" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="create-user" options={{ presentation: 'modal' }} />
-        </>
-      )}
-    </Stack>
+    <Tabs screenOptions={{ headerShown: false }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Inicio',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="workers"
+        options={{
+          title: 'Trabajadores',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Explorar',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="search" size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
