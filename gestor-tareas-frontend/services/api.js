@@ -1,9 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 
-// ✅ IP CORRECTA Y CONSISTENTE
-const API_BASE_URL = 'http://192.168.100.236:3001/api';
+// ✅ TU IP REAL
+const API_BASE_URL = 'http://192.168.1.27:3001/api';
 
 console.log('🌐 Conectando a:', API_BASE_URL);
 
