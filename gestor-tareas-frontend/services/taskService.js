@@ -1,31 +1,59 @@
-import api from './api';
+import { Platform } from 'react-native';
+
+const getBaseUrl = () => {
+  if (__DEV__) {
+    if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:3001';
+    }
+    if (Platform.OS === 'ios') {
+      return 'http://localhost:3001';
+    }
+    // ⭐⭐ TU IP REAL: 192.168.1.27 ⭐⭐
+    return 'http://192.168.1.27:3001';
+  }
+  return 'https://tudominio.com';
+};
+
+const API_URL = getBaseUrl();
 
 export const taskService = {
-  async getAllTasks() {
+  async createTask(taskData) {
     try {
-      const response = await api.get('/tareas'); // ← Esto ahora funcionará
-      return response.data;
+      console.log('🌐 Creando tarea en:', `${API_URL}/api/tasks`);
+      console.log('📤 Datos tarea:', taskData);
+      
+      const response = await fetch(`${API_URL}/api/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskData),
+        timeout: 10000
+      });
+      
+      const data = await response.json();
+      console.log('✅ Respuesta tarea:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Error creando tarea');
+      }
+      
+      return data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('❌ Error creando tarea:', error);
+      throw error;
     }
   },
 
-  async createTask(taskData) {
+  async getAllTasks() {
     try {
-      const taskDataForBackend = {
-        titulo: taskData.titulo,
-        descripcion: taskData.descripcion,  
-        id_trabajador: taskData.id_trabajador,
-        estado: taskData.estado || 'pendiente',
-        fecha_limite: taskData.fecha_limite,
-        id_usuario: taskData.id_usuario
-      };
-      
-      const response = await api.post('/tareas', taskDataForBackend);
-      return response.data;
+      const response = await fetch(`${API_URL}/api/tasks`, {
+        timeout: 10000
+      });
+      return response.json();
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Error fetching tasks:', error);
+      throw error;
     }
   }
-  // ... resto de métodos igual
 };

@@ -18,80 +18,128 @@ export default function CreateWorkerScreen() {
   const [telefono, setTelefono] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const getAPIUrl = () => {
-    if (__DEV__) {
-      if (Platform.OS === 'android') {
-        return 'http://10.0.2.2:3001/api/workers';
-      }
-      if (Platform.OS === 'ios') {
-        return 'http://localhost:3001/api/workers';
-      }
-      return 'http://localhost:3001/api/workers';
-    }
-    return 'https://tudominio.com/api/workers';
-  };
-
+  // ⭐⭐ FUNCIÓN SIMPLIFICADA Y CORREGIDA ⭐⭐
   const handleCreateWorker = async () => {
+    console.log('=== INICIANDO CREACIÓN ===');
+    
+    // Validaciones
     if (!nombre.trim()) {
       Alert.alert('Error', 'El nombre es requerido');
       return;
     }
 
-    if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Error', 'Ingrese un email válido');
-      return;
-    }
-
     setLoading(true);
+
     try {
-      const API_URL = getAPIUrl();
+      // ⭐⭐ IP CORRECTA: 192.168.1.27 ⭐⭐
+      const API_URL = 'http://192.168.1.27:3001/api/workers';
       
+      // Datos que espera el backend
+      const datosParaEnviar = {
+        name: nombre.trim(),  // "name" no "nombre"
+        contact_info: email.trim() || telefono.trim() || null
+      };
+
+      console.log('Enviando a:', API_URL);
+      console.log('Datos:', datosParaEnviar);
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          nombre,
-          email,
-          telefono: telefono || ''
-        }),
+        body: JSON.stringify(datosParaEnviar),
       });
 
-      const data = await response.json();
-
-      // ⭐⭐ AQUÍ VA EL CÓDIGO QUE PREGUNTASTE ⭐⭐
-      if (response.ok) {
-        Alert.alert('✅ Éxito', 'Trabajador creado correctamente');
-        
-        // Esperar 1 segundo antes de limpiar y regresar
-        setTimeout(() => {
-          setNombre('');
-          setEmail('');
-          setTelefono('');
-          router.back();
-        }, 1000);
-        
-      } else {
-        Alert.alert('❌ Error', data.error || 'No se pudo crear el trabajador');
-      }
-      // ⭐⭐ FIN DEL CÓDIGO ⭐⭐
+      console.log('Status:', response.status);
       
+      // IMPORTANTE: Manejar respuesta como texto primero
+      const responseText = await response.text();
+      console.log('Respuesta texto:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('Respuesta JSON:', data);
+      } catch (error) {
+        console.error('Error parseando JSON:', error);
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      // ⭐⭐ VERIFICAR RESPUESTA CORRECTAMENTE ⭐⭐
+      if (response.ok) {
+        // El backend devuelve { success: true, message: "...", workerId: X }
+        if (data.success) {
+          console.log('✅ TRABAJADOR CREADO CON ÉXITO');
+          
+          // 1. Mostrar mensaje de éxito
+          Alert.alert(
+            '✅ Éxito', 
+            data.message || 'Trabajador creado correctamente',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  console.log('Alert cerrado, limpiando formulario...');
+                  // 2. Limpiar TODOS los campos
+                  setNombre('');
+                  setEmail('');
+                  setTelefono('');
+                  // 3. Regresar a la pantalla anterior
+                  router.back();
+                }
+              }
+            ]
+          );
+          
+        } else {
+          // El backend devolvió success: false
+          Alert.alert('❌ Error', data.message || data.error || 'Error desconocido');
+        }
+      } else {
+        // Error HTTP (404, 500, etc.)
+        Alert.alert('❌ Error del servidor', 
+          `Código: ${response.status}\n${data.message || data.error || 'Error desconocido'}`
+        );
+      }
+
     } catch (error: any) {
-      console.error('Error:', error);
-      Alert.alert(
-        '❌ Error de conexión', 
-        'No se pudo conectar con el servidor. Por favor, intente nuevamente.'
-      );
+      console.error('Error completo:', error);
+      
+      // Mensajes de error más específicos
+      let mensaje = 'Error desconocido';
+      
+      if (error.message.includes('Network request failed')) {
+        mensaje = 'Error de red. Verifica tu conexión.';
+      } else if (error.message.includes('Failed to fetch')) {
+        mensaje = 'No se pudo conectar al servidor.';
+      } else {
+        mensaje = error.message;
+      }
+      
+      Alert.alert('❌ Error', mensaje);
+      
     } finally {
       setLoading(false);
+      console.log('=== FIN DEL PROCESO ===');
     }
+  };
+
+  // ⭐⭐ BOTÓN PARA LIMPIAR MANUALMENTE (OPCIONAL) ⭐⭐
+  const handleClearForm = () => {
+    setNombre('');
+    setEmail('');
+    setTelefono('');
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title}>Crear Nuevo Trabajador</Text>
+        
+        <Text style={styles.note}>
+          📍 Conectando a: 192.168.1.27:3001
+        </Text>
         
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Nombre *</Text>
@@ -105,7 +153,7 @@ export default function CreateWorkerScreen() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email *</Text>
+          <Text style={styles.label}>Email (Opcional)</Text>
           <TextInput
             style={styles.input}
             placeholder="ejemplo@correo.com"
@@ -129,13 +177,26 @@ export default function CreateWorkerScreen() {
           />
         </View>
 
+        {/* Botón para limpiar manualmente */}
+        <TouchableOpacity
+          style={[styles.clearButton, loading && styles.buttonDisabled]}
+          onPress={handleClearForm}
+          disabled={loading}
+        >
+          <Text style={styles.clearButtonText}>Limpiar Formulario</Text>
+        </TouchableOpacity>
+
+        {/* Botón principal */}
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleCreateWorker}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color="#fff" size="small" />
+              <Text style={styles.buttonText}>Creando...</Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Crear Trabajador</Text>
           )}
@@ -146,7 +207,7 @@ export default function CreateWorkerScreen() {
           onPress={() => router.back()}
           disabled={loading}
         >
-          <Text style={styles.cancelButtonText}>Cancelar</Text>
+          <Text style={styles.cancelButtonText}>Cancelar y Volver</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -172,9 +233,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: 15,
     textAlign: 'center',
     color: '#333',
+  },
+  note: {
+    fontSize: 12,
+    color: '#3498db',
+    marginBottom: 20,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   inputContainer: {
     marginBottom: 20,
@@ -193,15 +261,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
+  clearButton: {
+    backgroundColor: '#f39c12',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#2ecc71',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 5,
   },
   buttonDisabled: {
-    backgroundColor: '#a5d6a7',
+    backgroundColor: '#95a5a6',
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   buttonText: {
     color: '#fff',
@@ -214,7 +301,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   cancelButtonText: {
-    color: '#f44336',
+    color: '#e74c3c',
     fontSize: 16,
+    fontWeight: '600',
   },
 });
