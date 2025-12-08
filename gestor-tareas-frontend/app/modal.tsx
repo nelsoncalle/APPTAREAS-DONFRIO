@@ -70,46 +70,75 @@ export default function CreateTaskModal() {
   };
 
   // ⭐⭐ FUNCIÓN handleCreateTask ACTUALIZADA ⭐⭐
-  const handleCreateTask = async () => {
-    if (!titulo || !descripcion || !idTrabajador || !fechaLimite) {
-      Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
-      return;
-    }
+  // ⭐⭐ FUNCIÓN CORREGIDA - Enviar en ESPAÑOL ⭐⭐
+const handleCreateTask = async () => {
+  console.log('=== INICIANDO CREACIÓN DE TAREA ===');
+  
+  if (!titulo || !descripcion || !idTrabajador || !fechaLimite) {
+    Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
+  
+  try {
+    // ⭐⭐ DATOS en ESPAÑOL (como espera tu backend) ⭐⭐
+    const taskData = {
+      titulo: titulo,                    // ⭐ "titulo" no "title"
+      descripcion: descripcion,          // ⭐ "descripcion" no "description"
+      fecha_limite: fechaLimite,         // ⭐ "fecha_limite" no "due_date"
+      trabajador_id: parseInt(idTrabajador) // ⭐ "trabajador_id" no "assigned_to_worker_id"
+      // ⭐ NOTA: No envíes status ni created_by_user_id
+      // ⭐ El backend los asigna automáticamente
+    };
+
+    console.log('📤 Enviando datos (ESPAÑOL):', taskData);
+    console.log('📤 JSON:', JSON.stringify(taskData));
+    
+    // ⭐⭐ TU IP: 192.168.1.27 ⭐⭐
+    const API_URL = 'http://192.168.1.27:3001/api/tasks';
+    console.log('🌐 URL:', API_URL);
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(taskData),
+    });
+    
+    console.log('📥 Status:', response.status);
+    console.log('📥 OK?', response.ok);
+    
+    const responseText = await response.text();
+    console.log('📥 Respuesta texto:', responseText);
+    
+    let data;
     try {
-      const userData = await AsyncStorage.getItem('userData');
-      const user = userData ? JSON.parse(userData) : null;
-
-      // ⭐⭐ IMPORTANTE: Estos nombres deben coincidir con tu backend
-      const taskData = {
-        title: titulo,                    // "title" en el backend
-        description: descripcion,         // "description" en el backend
-        status: 'pending',                // "status" en el backend
-        due_date: fechaLimite,            // "due_date" en el backend
-        assigned_to_worker_id: parseInt(idTrabajador), // "assigned_to_worker_id"
-        created_by_user_id: user?.id || 1 // "created_by_user_id"
-      };
-
-      console.log('Enviando tarea:', taskData);
-      
-      const result = await taskService.createTask(taskData);
-      
-      console.log('Respuesta del backend:', result);
-      
-      if (result.success) {
-        Alert.alert('✅ Éxito', 'Tarea creada correctamente');
-        router.back();
-      } else {
-        Alert.alert('❌ Error', result.error || result.message || 'Error al crear la tarea');
-      }
-    } catch (error:any) {
-      console.error('Error creando tarea:', error);
-      Alert.alert('Error', error.message || 'Error al crear la tarea');
-    } finally {
-      setLoading(false);
+      data = JSON.parse(responseText);
+      console.log('📥 Respuesta JSON:', data);
+    } catch (error) {
+      console.error('❌ Error parseando JSON:', error);
+      throw new Error('Respuesta inválida del servidor');
     }
-  };
+    
+    if (response.ok && data.success) {
+      console.log('✅ TAREA CREADA CON ÉXITO');
+      Alert.alert('✅ Éxito', 'Tarea creada correctamente');
+      router.back();
+    } else {
+      console.log('❌ Error del servidor:', data);
+      Alert.alert('❌ Error', data.error || data.message || 'Error al crear tarea');
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Error completo:', error);
+    Alert.alert('❌ Error', error.message || 'Error al crear la tarea');
+  } finally {
+    setLoading(false);
+    console.log('=== FIN ===');
+  }
+};
 
   const handleCancel = () => {
     router.back();

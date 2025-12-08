@@ -16,26 +16,35 @@ const getBaseUrl = () => {
 
 const API_URL = getBaseUrl();
 
+// services/taskService.js - ACTUALIZA ESTE ARCHIVO
 export const taskService = {
   async createTask(taskData) {
     try {
-      console.log('🌐 Creando tarea en:', `${API_URL}/api/tasks`);
-      console.log('📤 Datos tarea:', taskData);
+      console.log('🌐 Creando tarea...');
+      
+      // ⭐⭐ IMPORTANTE: Convertir a español si es necesario ⭐⭐
+      const datosEnEspanol = {
+        titulo: taskData.titulo || taskData.title,
+        descripcion: taskData.descripcion || taskData.description,
+        fecha_limite: taskData.fecha_limite || taskData.due_date,
+        trabajador_id: taskData.trabajador_id || taskData.assigned_to_worker_id
+      };
+      
+      console.log('📤 Datos en español:', datosEnEspanol);
       
       const response = await fetch(`${API_URL}/api/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(taskData),
-        timeout: 10000
+        body: JSON.stringify(datosEnEspanol),
       });
       
       const data = await response.json();
-      console.log('✅ Respuesta tarea:', data);
+      console.log('✅ Respuesta:', data);
       
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Error creando tarea');
+        throw new Error(data.error || data.message || 'Error creando tarea');
       }
       
       return data;
@@ -44,16 +53,5 @@ export const taskService = {
       throw error;
     }
   },
-
-  async getAllTasks() {
-    try {
-      const response = await fetch(`${API_URL}/api/tasks`, {
-        timeout: 10000
-      });
-      return response.json();
-    } catch (error) {
-      console.error('Error fetching tasks:', error);
-      throw error;
-    }
-  }
+  // ... otras funciones
 };

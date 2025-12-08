@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  Platform 
+  Modal // ⭐ NUEVO: Importar Modal
 } from 'react-native';
 import { router } from 'expo-router';
 
@@ -17,197 +17,172 @@ export default function CreateWorkerScreen() {
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false); // ⭐ NUEVO estado
+  const [trabajadorCreado, setTrabajadorCreado] = useState(''); // ⭐ Para guardar el nombre creado
 
-  // ⭐⭐ FUNCIÓN SIMPLIFICADA Y CORREGIDA ⭐⭐
   const handleCreateWorker = async () => {
-    console.log('=== INICIANDO CREACIÓN ===');
-    
-    // Validaciones
     if (!nombre.trim()) {
       Alert.alert('Error', 'El nombre es requerido');
       return;
     }
 
     setLoading(true);
-
     try {
-      // ⭐⭐ IP CORRECTA: 192.168.1.27 ⭐⭐
       const API_URL = 'http://192.168.1.27:3001/api/workers';
       
-      // Datos que espera el backend
-      const datosParaEnviar = {
-        name: nombre.trim(),  // "name" no "nombre"
-        contact_info: email.trim() || telefono.trim() || null
-      };
-
-      console.log('Enviando a:', API_URL);
-      console.log('Datos:', datosParaEnviar);
-
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(datosParaEnviar),
+        body: JSON.stringify({
+          name: nombre.trim(),
+          contact_info: email.trim() || telefono.trim() || null
+        }),
       });
 
-      console.log('Status:', response.status);
-      
-      // IMPORTANTE: Manejar respuesta como texto primero
-      const responseText = await response.text();
-      console.log('Respuesta texto:', responseText);
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-        console.log('Respuesta JSON:', data);
-      } catch (error) {
-        console.error('Error parseando JSON:', error);
-        throw new Error('Respuesta inválida del servidor');
-      }
+      const data = await response.json();
 
-      // ⭐⭐ VERIFICAR RESPUESTA CORRECTAMENTE ⭐⭐
-      if (response.ok) {
-        // El backend devuelve { success: true, message: "...", workerId: X }
-        if (data.success) {
-          console.log('✅ TRABAJADOR CREADO CON ÉXITO');
-          
-          // 1. Mostrar mensaje de éxito
-          Alert.alert(
-            '✅ Éxito', 
-            data.message || 'Trabajador creado correctamente',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  console.log('Alert cerrado, limpiando formulario...');
-                  // 2. Limpiar TODOS los campos
-                  setNombre('');
-                  setEmail('');
-                  setTelefono('');
-                  // 3. Regresar a la pantalla anterior
-                  router.back();
-                }
-              }
-            ]
-          );
-          
-        } else {
-          // El backend devolvió success: false
-          Alert.alert('❌ Error', data.message || data.error || 'Error desconocido');
-        }
+      if (response.ok && data.success) {
+        // ⭐⭐ GUARDAR DATOS Y MOSTRAR MODAL VISIBLE ⭐⭐
+        setTrabajadorCreado(nombre);
+        setShowConfirmation(true); // Mostrar modal en pantalla
+        
       } else {
-        // Error HTTP (404, 500, etc.)
-        Alert.alert('❌ Error del servidor', 
-          `Código: ${response.status}\n${data.message || data.error || 'Error desconocido'}`
-        );
+        Alert.alert('❌ Error', data.message || data.error || 'Error al crear');
       }
-
+      
     } catch (error: any) {
-      console.error('Error completo:', error);
-      
-      // Mensajes de error más específicos
-      let mensaje = 'Error desconocido';
-      
-      if (error.message.includes('Network request failed')) {
-        mensaje = 'Error de red. Verifica tu conexión.';
-      } else if (error.message.includes('Failed to fetch')) {
-        mensaje = 'No se pudo conectar al servidor.';
-      } else {
-        mensaje = error.message;
-      }
-      
-      Alert.alert('❌ Error', mensaje);
-      
+      Alert.alert('Error', 'Error de conexión');
+      console.error(error);
     } finally {
       setLoading(false);
-      console.log('=== FIN DEL PROCESO ===');
     }
   };
 
-  // ⭐⭐ BOTÓN PARA LIMPIAR MANUALMENTE (OPCIONAL) ⭐⭐
-  const handleClearForm = () => {
+  // ⭐⭐ FUNCIÓN PARA CONFIRMAR Y LIMPIAR ⭐⭐
+  const handleConfirm = () => {
+    // 1. Ocultar el modal
+    setShowConfirmation(false);
+    
+    // 2. Limpiar los campos
     setNombre('');
     setEmail('');
     setTelefono('');
+    
+    // 3. Limpiar el nombre guardado
+    setTrabajadorCreado('');
   };
 
   return (
     <ScrollView style={styles.container}>
+      {/* ⭐⭐ MODAL DE CONFIRMACIÓN VISIBLE EN PANTALLA ⭐⭐ */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showConfirmation}
+        onRequestClose={() => setShowConfirmation(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>✅ ÉXITO</Text>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalMessage}>
+                Trabajador creado exitosamente
+              </Text>
+              
+              <View style={styles.successCard}>
+                <Text style={styles.successName}>{trabajadorCreado}</Text>
+                <Text style={styles.successText}>
+                  Ha sido registrado en el sistema
+                </Text>
+              </View>
+              
+              <Text style={styles.modalHint}>
+                Los campos se limpiarán automáticamente
+              </Text>
+            </View>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.confirmButtonText}>ACEPTAR</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.card}>
-        <Text style={styles.title}>Crear Nuevo Trabajador</Text>
+        <Text style={styles.title}>Crear Trabajador</Text>
         
-        <Text style={styles.note}>
-          📍 Conectando a: 192.168.1.27:3001
-        </Text>
+        {/* Indicador de que se mostrará confirmación */}
+        {showConfirmation && (
+          <View style={styles.pendingConfirmation}>
+            <Text style={styles.pendingText}>✅ Esperando confirmación...</Text>
+          </View>
+        )}
         
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Nombre *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ingrese el nombre completo"
+            placeholder="Nombre completo"
             value={nombre}
             onChangeText={setNombre}
-            editable={!loading}
+            editable={!loading && !showConfirmation}
           />
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email (Opcional)</Text>
+          <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
-            placeholder="ejemplo@correo.com"
+            placeholder="Email (opcional)"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!loading}
+            editable={!loading && !showConfirmation}
           />
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Teléfono (Opcional)</Text>
+          <Text style={styles.label}>Teléfono</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ingrese el teléfono"
+            placeholder="Teléfono (opcional)"
             value={telefono}
             onChangeText={setTelefono}
             keyboardType="phone-pad"
-            editable={!loading}
+            editable={!loading && !showConfirmation}
           />
         </View>
 
-        {/* Botón para limpiar manualmente */}
         <TouchableOpacity
-          style={[styles.clearButton, loading && styles.buttonDisabled]}
-          onPress={handleClearForm}
-          disabled={loading}
-        >
-          <Text style={styles.clearButtonText}>Limpiar Formulario</Text>
-        </TouchableOpacity>
-
-        {/* Botón principal */}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, (loading || showConfirmation) && styles.buttonDisabled]}
           onPress={handleCreateWorker}
-          disabled={loading}
+          disabled={loading || showConfirmation}
         >
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={styles.buttonText}>Creando...</Text>
-            </View>
+            <ActivityIndicator color="#fff" />
+          ) : showConfirmation ? (
+            <Text style={styles.buttonText}>✅ CREADO</Text>
           ) : (
             <Text style={styles.buttonText}>Crear Trabajador</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.cancelButton}
+          style={[styles.cancelButton, (loading || showConfirmation) && styles.buttonDisabled]}
           onPress={() => router.back()}
-          disabled={loading}
+          disabled={loading || showConfirmation}
         >
-          <Text style={styles.cancelButtonText}>Cancelar y Volver</Text>
+          <Text style={styles.cancelButtonText}>Cancelar</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -233,16 +208,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 30,
     textAlign: 'center',
     color: '#333',
   },
-  note: {
-    fontSize: 12,
-    color: '#3498db',
+  pendingConfirmation: {
+    backgroundColor: '#d4edda',
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c3e6cb',
+  },
+  pendingText: {
+    color: '#155724',
     textAlign: 'center',
-    fontStyle: 'italic',
+    fontWeight: '600',
   },
   inputContainer: {
     marginBottom: 20,
@@ -261,34 +242,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
-  clearButton: {
-    backgroundColor: '#f39c12',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  clearButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   button: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: '#4CAF50',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 5,
+    marginTop: 10,
   },
   buttonDisabled: {
     backgroundColor: '#95a5a6',
     opacity: 0.7,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
   },
   buttonText: {
     color: '#fff',
@@ -301,8 +264,90 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   cancelButtonText: {
-    color: '#e74c3c',
+    color: '#f44336',
     fontSize: 16,
-    fontWeight: '600',
+  },
+  
+  // ⭐⭐ ESTILOS DEL MODAL DE CONFIRMACIÓN ⭐⭐
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    width: '90%',
+    maxWidth: 400,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    backgroundColor: '#27ae60',
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  modalBody: {
+    padding: 25,
+    alignItems: 'center',
+  },
+  modalMessage: {
+    fontSize: 18,
+    color: '#2c3e50',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  successCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#27ae60',
+    marginBottom: 20,
+    width: '100%',
+    alignItems: 'center',
+  },
+  successName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginBottom: 8,
+  },
+  successText: {
+    fontSize: 16,
+    color: '#555',
+  },
+  modalHint: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  confirmButton: {
+    backgroundColor: '#27ae60',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
