@@ -1,57 +1,89 @@
-import { Platform } from 'react-native';
+// services/taskService.js
+import apiService from './api.js';
 
-const getBaseUrl = () => {
-  if (__DEV__) {
-    if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:3001';
-    }
-    if (Platform.OS === 'ios') {
-      return 'http://localhost:3001';
-    }
-    // ⭐⭐ TU IP REAL: 192.168.1.27 ⭐⭐
-    return 'http://192.168.1.27:3001';
-  }
-  return 'https://tudominio.com';
-};
-
-const API_URL = getBaseUrl();
-
-// services/taskService.js - ACTUALIZA ESTE ARCHIVO
 export const taskService = {
+  // Obtener todas las tareas
+  async getAllTasks() {
+    try {
+      const response = await apiService.get('/api/tasks');
+      console.log('✅ Tareas obtenidas:', response.data?.length || 0);
+      return response;
+    } catch (error) {
+      console.error('❌ Error obteniendo tareas:', error);
+      throw error;
+    }
+  },
+
+  // Crear una tarea
   async createTask(taskData) {
     try {
-      console.log('🌐 Creando tarea...');
-      
-      // ⭐⭐ IMPORTANTE: Convertir a español si es necesario ⭐⭐
-      const datosEnEspanol = {
-        titulo: taskData.titulo || taskData.title,
-        descripcion: taskData.descripcion || taskData.description,
-        fecha_limite: taskData.fecha_limite || taskData.due_date,
-        trabajador_id: taskData.trabajador_id || taskData.assigned_to_worker_id
-      };
-      
-      console.log('📤 Datos en español:', datosEnEspanol);
-      
-      const response = await fetch(`${API_URL}/api/tasks`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(datosEnEspanol),
-      });
-      
-      const data = await response.json();
-      console.log('✅ Respuesta:', data);
-      
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Error creando tarea');
-      }
-      
-      return data;
+      console.log('📝 Creando tarea:', taskData);
+      const response = await apiService.post('/api/tasks', taskData);
+      console.log('✅ Tarea creada:', response);
+      return response;
     } catch (error) {
       console.error('❌ Error creando tarea:', error);
       throw error;
     }
   },
-  // ... otras funciones
+
+  // Actualizar una tarea
+  async updateTask(id, taskData) {
+    try {
+      const response = await apiService.put(`/api/tasks/${id}`, taskData);
+      console.log('✅ Tarea actualizada:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error actualizando tarea:', error);
+      throw error;
+    }
+  },
+
+  // Eliminar una tarea
+  async deleteTask(id) {
+    try {
+      const response = await apiService.delete(`/api/tasks/${id}`);
+      console.log('✅ Tarea eliminada:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error eliminando tarea:', error);
+      throw error;
+    }
+  },
+
+  // Obtener tarea por ID
+  async getTaskById(id) {
+    try {
+      const response = await apiService.get(`/api/tasks/${id}`);
+      console.log('✅ Tarea obtenida:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error obteniendo tarea:', error);
+      throw error;
+    }
+  },
+
+  // Obtener tareas por trabajador
+  async getTasksByWorker(workerId) {
+    try {
+      const response = await apiService.get(`/api/tasks/worker/${workerId}`);
+      console.log(`✅ Tareas del trabajador ${workerId}:`, response.data?.length || 0);
+      return response;
+    } catch (error) {
+      console.error('❌ Error obteniendo tareas por trabajador:', error);
+      throw error;
+    }
+  },
+
+  // Actualizar estado de tarea
+  async updateTaskStatus(id, status) {
+    try {
+      const response = await apiService.put(`/api/tasks/${id}/status`, { status });
+      console.log('✅ Estado de tarea actualizado:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Error actualizando estado:', error);
+      throw error;
+    }
+  }
 };
